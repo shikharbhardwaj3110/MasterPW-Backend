@@ -1,6 +1,6 @@
 # Password-Manager
 
-A short and sweet master password application to store all passwords under a single master password.
+A short and sweet master password application with a responsive design to store all passwords under a single master password.
 
 **Site in action :**
 
