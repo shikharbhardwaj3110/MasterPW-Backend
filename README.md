@@ -5,7 +5,7 @@ A short and sweet master password application to store all passwords under a sin
 **Site in action :**
 
 <p align="center">
-  <img src="/public/landingpage.PNG"/>
+  <img src="img/landingpage.PNG"/>
 </p>
 
 <br><br>
