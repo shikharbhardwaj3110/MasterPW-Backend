@@ -14,7 +14,8 @@ verifyToken = (req, res, next) => {
             res.sendStatus(403)
         else
             console.log(decoded)
-        req.user = decoded
+            req.user = decoded
+            next()
     })
 }
 

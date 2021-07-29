@@ -30,6 +30,10 @@ app.post('/logOut', (req, res) => {
     res.send('logout')
 })
 
+app.get('/getPasswords',(req, res) => {
+    res.send('passwords')
+})
+
 app.post('/createUser', (req, res) => {
     const email = req.body.email
     const username = req.body.username
@@ -63,6 +67,7 @@ app.post('/addPassword', (req, res) => {
     passObj['utilName'] = utilName
     passObj['utilUsername'] = utilUsername
     passObj['utilPassword'] = utilPassword
+    passObj['timestamp'] = new Date().toLocaleString()
     dbUtil.connectDatabase((err, client) => {
         if (err)
             res.send(err)
