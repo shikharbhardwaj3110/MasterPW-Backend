@@ -33,14 +33,15 @@ app.post('/logOut', jwtUtil.verifyToken, (req, res) => {
 
 })
 
-app.get('/getPasswords', jwtUtil.verifyToken, async (req, res) => {
+app.get('/getPasswords/sort/:id', jwtUtil.verifyToken, async (req, res) => {
     const username = req.user.username
+    const sortId = req.params.id
     dbUtil.connectDatabase(async (err, client) => {
         if (err)
             res.send(err)
         else {
             const db = dbUtil.getDb().collection('password-data')
-            const cursor = db.find({ username }).sort({"timestamp" : -1})
+            const cursor = db.find({ username }).sort({"timestamp" : sortId})
             //const cursor = db.collection.find( { $query: { username }, $orderby: { timestamp : -1 } } )
             const allValues = await cursor.toArray();
             res.json(allValues)
