@@ -9,7 +9,8 @@ signToken = async (username, callback) => {
 }
 
 verifyToken = (req, res, next) => {
-    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    //console.log(req.headers.authorization.split(' ')[1])
+    jwt.verify(req.headers.authorization.split(' ')[1], process.env.JWT_SECRET, (err, decoded) => {
         if (err)
             res.sendStatus(403)
         else

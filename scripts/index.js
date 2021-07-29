@@ -10,7 +10,7 @@ app.use(express.urlencoded({ extended: true }));
 
 const port = process.env.PORT || 3000
 
-app.get('/auth', (req, res) => {
+app.get('/auth', jwtUtil.verifyToken, (req, res) => {
     const username = req.body.username
     const password = req.body.password
     dbUtil.connectDatabase((err, client) => {
@@ -26,12 +26,26 @@ app.get('/auth', (req, res) => {
     })
 })
 
-app.post('/logOut', (req, res) => {
-    res.send('logout')
+app.post('/logOut', jwtUtil.verifyToken, (req, res) => {
+    //console.log(req.headers.authorization.split(' ')[1])
+    //console.log(req)
+    //res.send('logout')
+   
 })
 
-app.get('/getPasswords',(req, res) => {
-    res.send('passwords')
+app.get('/getPasswords', jwtUtil.verifyToken, (req, res) => {
+    const username = req.user.username
+    var project = {}
+    project['passwords'] = 1
+    dbUtil.connectDatabase((err, client) => {
+        if(err)
+            res.send(err)
+        const db = dbUtil.getDb().collection('user-data')
+        db.findOne({username}, {projection : project}).then(result => {
+            res.json(result)
+        })
+    })
+    //res.send('passwords')
 })
 
 app.post('/createUser', (req, res) => {
@@ -48,9 +62,9 @@ app.post('/createUser', (req, res) => {
                 jwtUtil.signToken(username, token => {
                     console.log(token)
                     db.insertOne({ username, password, email, token, passwords: [] }).then(insertResult => {
-                        res.json({token})
+                        res.json({ token })
                     })
-                })  
+                })
             }
             else
                 res.send("User is already registered !")
