@@ -30,20 +30,21 @@ app.post('/logOut', jwtUtil.verifyToken, (req, res) => {
     //console.log(req.headers.authorization.split(' ')[1])
     //console.log(req)
     //res.send('logout')
-   
+
 })
 
-app.get('/getPasswords', jwtUtil.verifyToken, (req, res) => {
+app.get('/getPasswords', jwtUtil.verifyToken, async (req, res) => {
     const username = req.user.username
-    var project = {}
-    project['passwords'] = 1
-    dbUtil.connectDatabase((err, client) => {
-        if(err)
+    dbUtil.connectDatabase(async (err, client) => {
+        if (err)
             res.send(err)
-        const db = dbUtil.getDb().collection('user-data')
-        db.findOne({username}, {projection : project}).then(result => {
-            res.json(result)
-        })
+        else {
+            const db = dbUtil.getDb().collection('password-data')
+            const cursor = db.find({ username }).sort({"timestamp" : -1})
+            //const cursor = db.collection.find( { $query: { username }, $orderby: { timestamp : -1 } } )
+            const allValues = await cursor.toArray();
+            res.json(allValues)
+        }
     })
     //res.send('passwords')
 })
@@ -58,7 +59,6 @@ app.post('/createUser', (req, res) => {
         const db = dbUtil.getDb().collection('user-data')
         db.findOne({ $or: [{ email }, { username }] }).then(result => {
             if (result == undefined) {
-                var signedTokenMain
                 jwtUtil.signToken(username, token => {
                     console.log(token)
                     db.insertOne({ username, password, email, token, passwords: [] }).then(insertResult => {
@@ -72,31 +72,22 @@ app.post('/createUser', (req, res) => {
     })
 })
 
-app.post('/addPassword', (req, res) => {
+app.post('/addPassword', jwtUtil.verifyToken, (req, res) => {
+    const username = req.user.username
     const utilName = req.body.utilName
     const utilUsername = req.body.utilUsername
     const utilPassword = req.body.utilPassword
-    const username = req.body.username
-    var passObj = {}
-    passObj['utilName'] = utilName
-    passObj['utilUsername'] = utilUsername
-    passObj['utilPassword'] = utilPassword
-    passObj['timestamp'] = new Date().toLocaleString()
     dbUtil.connectDatabase((err, client) => {
         if (err)
             res.send(err)
-        const db = dbUtil.getDb().collection('user-data')
-        db.updateOne({ username }, {
-            $push: {
-                passwords: passObj
+        const db = dbUtil.getDb().collection('password-data')
+        db.insertOne({username, utilName, utilUsername, utilPassword, timestamp : Math.floor(new Date().getTime() / 1000)},(err,items) => {
+            if(err)
+                res.send(err)
+            else {
+                console.log(items)
+                res.send('Insertion successful !')
             }
-        }).then(result => {
-            if (result.modifiedCount)
-                res.send("Updation successful !")
-            else
-                res.send("No account found !")
-        }).catch(err => {
-            res.send(err)
         })
     })
 })
