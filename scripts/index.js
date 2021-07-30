@@ -2,6 +2,7 @@ const express = require('express')
 const cors = require('cors')
 const dbUtil = require('./databaseConnection')
 const jwtUtil = require('./webToken')
+const emailUtil = require('./emailUtil')
 const app = express(cors())
 const dotenv = require('dotenv').config()
 
@@ -33,6 +34,27 @@ app.post('/logOut', jwtUtil.verifyToken, (req, res) => {
 
 })
 
+app.delete('/deletePassword', jwtUtil.verifyToken, (req, res) => {
+    res.send('delete password')
+})
+
+app.post('/resetPassword', (req, res) => {
+    const email = req.body.email
+    dbUtil.connectDatabase((err, client) => {
+        if (err)
+            res.send(err)
+        const db = dbUtil.getDb().collection('user-data')
+
+        jwtUtil.signToken(email, token => {
+            console.log(token)
+            const resetUrl = 'http://localhost:3000/passwordReset?token='+token
+            emailUtil.sendEmail(email, resetUrl)
+        })
+    })
+})
+
+
+
 app.get('/getPasswords/sort/:id', jwtUtil.verifyToken, async (req, res) => {
     const username = req.user.username
     const sortId = req.params.id
@@ -41,7 +63,7 @@ app.get('/getPasswords/sort/:id', jwtUtil.verifyToken, async (req, res) => {
             res.send(err)
         else {
             const db = dbUtil.getDb().collection('password-data')
-            const cursor = db.find({ username }).sort({"timestamp" : sortId})
+            const cursor = db.find({ username }).sort({ "timestamp": sortId })
             //const cursor = db.collection.find( { $query: { username }, $orderby: { timestamp : -1 } } )
             const allValues = await cursor.toArray();
             res.json(allValues)
@@ -82,8 +104,8 @@ app.post('/addPassword', jwtUtil.verifyToken, (req, res) => {
         if (err)
             res.send(err)
         const db = dbUtil.getDb().collection('password-data')
-        db.insertOne({username, utilName, utilUsername, utilPassword, timestamp : Math.floor(new Date().getTime() / 1000)},(err,items) => {
-            if(err)
+        db.insertOne({ username, utilName, utilUsername, utilPassword, timestamp: Math.floor(new Date().getTime() / 1000) }, (err, items) => {
+            if (err)
                 res.send(err)
             else {
                 console.log(items)
