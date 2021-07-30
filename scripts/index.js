@@ -4,10 +4,13 @@ const dbUtil = require('./databaseConnection')
 const jwtUtil = require('./webToken')
 const emailUtil = require('./emailUtil')
 const app = express(cors())
+const path = require('path')
 const dotenv = require('dotenv').config()
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(express.static('public'))
+
 
 const port = process.env.PORT || 3000
 
@@ -38,7 +41,7 @@ app.delete('/deletePassword', jwtUtil.verifyToken, (req, res) => {
     res.send('delete password')
 })
 
-app.post('/resetPassword', (req, res) => {
+app.post('/resetPasswordLink', (req, res) => {
     const email = req.body.email
     dbUtil.connectDatabase((err, client) => {
         if (err)
@@ -53,7 +56,23 @@ app.post('/resetPassword', (req, res) => {
     })
 })
 
+app.get('/passwordReset', jwtUtil.verifyToken, (req, res) => {
+    //const filePath = path.resolve(__dirname + '../' + )
+    const filePath = path.join(__dirname,'../public')
+    res.sendFile('passwordreset.html' , { root : filePath })
+})
 
+app.post('/resetPasswordFinal', jwtUtil.verifyToken, (req, res) => {
+    const password = req.body.password
+    dbUtil.connectDatabase((err, client) => {
+        if (err)
+            res.send(err)
+        else {
+            const db = dbUtil.getDb().collection('user-data')
+            db.updateOne({ email : req.user.username }, {$set : { "password" : password }})
+        }
+    })
+})
 
 app.get('/getPasswords/sort/:id', jwtUtil.verifyToken, async (req, res) => {
     const username = req.user.username
