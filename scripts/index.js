@@ -3,11 +3,13 @@ const cors = require('cors')
 const dbUtil = require('./databaseConnection')
 const jwtUtil = require('./webToken')
 const emailUtil = require('./emailUtil')
-const app = express(cors())
 const path = require('path')
 const dotenv = require('dotenv').config()
 
-app.use(express.json());
+const app = express()
+
+app.use(cors())
+app.use(express.json())
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'))
 
@@ -58,12 +60,17 @@ app.post('/resetPasswordLink', (req, res) => {
 
 app.get('/passwordReset', jwtUtil.verifyToken, (req, res) => {
     //const filePath = path.resolve(__dirname + '../' + )
+
+    console.log("Inside password reset route")
     const filePath = path.join(__dirname,'../public')
     res.sendFile('passwordreset.html' , { root : filePath })
 })
 
 app.post('/resetPasswordFinal', jwtUtil.verifyToken, (req, res) => {
+    console.log(req)
+    console.log("Inside reset password final body ")
     const password = req.body.password
+    console.log("Password recvd : ",password)
     dbUtil.connectDatabase((err, client) => {
         if (err)
             res.send(err)
