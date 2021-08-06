@@ -16,7 +16,7 @@ verifyToken = (req, res, next) => {
     if(req.headers.authorization==undefined)
         token = req.query.token
     else
-        token = req.headers.authorization
+        token = req.headers.authorization.split(' ')[1]
     //const token = req.headers.authorization.split(' ')[1] || req.params.token
     console.log("Token recvd : " , token)
     jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {

@@ -5,6 +5,10 @@ const jwtUtil = require('./webToken')
 const emailUtil = require('./emailUtil')
 const path = require('path')
 const dotenv = require('dotenv').config()
+const jwt = require('jsonwebtoken')
+const { v4: uuidv4 } = require('uuid');
+
+console.log(uuidv4())
 
 const app = express()
 
@@ -13,8 +17,29 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'))
 
+const filePath = path.join(__dirname, '../public')
 
 const port = process.env.PORT || 3000
+
+app.get('/', (req, res) => {
+    const token = req.headers.authorization.split(' ')[1]
+    console.log(token)
+    if (token == undefined) {
+        res.sendFile('index.html', { root: filePath })
+    }
+    else {
+        jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+            console.log(decoded)
+            if (err)
+                res.sendStatus(403)
+            else {
+                console.log(decoded)
+                res.sendFile('dashboard.html', { root: filePath })
+            }
+        })
+    }
+})
+
 
 app.get('/auth', jwtUtil.verifyToken, (req, res) => {
     const username = req.body.username
@@ -50,36 +75,70 @@ app.post('/resetPasswordLink', (req, res) => {
             res.send(err)
         const db = dbUtil.getDb().collection('user-data')
 
-        jwtUtil.signToken(email, token => {
-            console.log(token)
-            const resetUrl = 'http://localhost:3000/passwordReset?token='+token
-            emailUtil.sendEmail(email, resetUrl)
+        let randomToken = uuidv4()
+        const resetUrl = 'http://localhost:3000/passwordReset/?token=' + randomToken
+        console.log(resetUrl)
+
+        dbUtil.connectDatabase((err, client) => {
+            if (err)
+                res.send(err)
+            else {
+                const db = dbUtil.getDb().collection('user-data')
+                db.updateOne({ email }, { $set: { "resetToken": randomToken } })
+                res.send("Email sent !")
+            }
         })
+
+
+        emailUtil.sendEmail(email, resetUrl)
+
     })
 })
 
-app.get('/passwordReset', jwtUtil.verifyToken, (req, res) => {
+app.post('/passwordReset', (req, res) => {
     //const filePath = path.resolve(__dirname + '../' + )
-
-    console.log("Inside password reset route")
-    const filePath = path.join(__dirname,'../public')
-    res.sendFile('passwordreset.html' , { root : filePath })
-})
-
-app.post('/resetPasswordFinal', jwtUtil.verifyToken, (req, res) => {
-    console.log(req)
-    console.log("Inside reset password final body ")
+    const token = req.query.token
+    if (token == "" || token == undefined)
+        res.sendStatus(404)
+    console.log(token)
     const password = req.body.password
-    console.log("Password recvd : ",password)
     dbUtil.connectDatabase((err, client) => {
         if (err)
             res.send(err)
         else {
             const db = dbUtil.getDb().collection('user-data')
-            db.updateOne({ email : req.user.username }, {$set : { "password" : password }})
+            db.findOne({ resetToken: token }, (err, items) => {
+                if (err)
+                    res.send("Error finding token in db !")
+                else {
+                    if (items == undefined)
+                        res.sendStatus(404)
+                    else {
+                        console.log(items)
+                        db.updateOne({ resetToken: token }, { $set: { "password": password, "resetToken": "" } })
+                    }
+                }
+            })
         }
     })
 })
+
+/*
+app.post('/resetPasswordFinal', jwtUtil.verifyToken, (req, res) => {
+    console.log(req)
+    console.log("Inside reset password final body ")
+    const password = req.body.password
+    console.log("Password recvd : ", password)
+    dbUtil.connectDatabase((err, client) => {
+        if (err)
+            res.send(err)
+        else {
+            const db = dbUtil.getDb().collection('user-data')
+            db.updateOne({ email: req.user.username }, { $set: { "password": password } })
+        }
+    })
+})
+*/
 
 app.get('/getPasswords/sort/:id', jwtUtil.verifyToken, async (req, res) => {
     const username = req.user.username
