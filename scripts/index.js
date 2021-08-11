@@ -8,8 +8,6 @@ const dotenv = require('dotenv').config()
 const jwt = require('jsonwebtoken')
 const { v4: uuidv4 } = require('uuid');
 
-console.log(uuidv4())
-
 const app = express()
 
 app.use(cors())
@@ -19,21 +17,21 @@ app.use(express.static('public'))
 
 const filePath = path.join(__dirname, '../public')
 
-const port = process.env.PORT || 3000
+const port = process.env.PORT || 3001
 
 app.get('/', (req, res) => {
-    const token = req.headers.authorization.split(' ')[1]
-    console.log(token)
+    const token = req.headers.authorization
+    //console.log(token)
     if (token == undefined) {
         res.sendFile('index.html', { root: filePath })
     }
     else {
-        jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-            console.log(decoded)
+        jwt.verify(token.split(' ')[1], process.env.JWT_SECRET, (err, decoded) => {
+            //console.log(decoded)
             if (err)
                 res.sendStatus(403)
             else {
-                console.log(decoded)
+                //console.log(decoded)
                 res.sendFile('dashboard.html', { root: filePath })
             }
         })
@@ -41,7 +39,7 @@ app.get('/', (req, res) => {
 })
 
 
-app.get('/auth', jwtUtil.verifyToken, (req, res) => {
+app.post('/auth', (req, res) => {
     const username = req.body.username
     const password = req.body.password
     dbUtil.connectDatabase((err, client) => {
@@ -49,8 +47,11 @@ app.get('/auth', jwtUtil.verifyToken, (req, res) => {
             res.send(err)
         const db = dbUtil.getDb().collection('user-data')
         db.findOne({ username, password }).then(result => {
-            if (result != undefined)
-                res.send({ authStatus: 1 })
+            if (result != undefined) {
+                jwtUtil.signToken(username, token => {
+                    res.send({token, username})
+                })
+            }
             else
                 res.send({ authStatus: 0 })
         })
@@ -143,6 +144,9 @@ app.post('/resetPasswordFinal', jwtUtil.verifyToken, (req, res) => {
 app.get('/getPasswords/sort/:id', jwtUtil.verifyToken, async (req, res) => {
     const username = req.user.username
     const sortId = req.params.id
+    console.log(req)
+    if(sortId==undefined)
+        sortId=1
     dbUtil.connectDatabase(async (err, client) => {
         if (err)
             res.send(err)
